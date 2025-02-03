@@ -7,14 +7,11 @@ import { fallbackUrl, cachePort } from "./config.js";
 const cacheMap = new Map();
 
 function getMapContents() {
-  const entries = {};
+  const result = {};
   for (const [key, value] of cacheMap.entries()) {
-    entries[key] = typeof value === 'bigint' ? value.toString() : value;
+    result[key] = typeof value === 'bigint' ? value.toString() : value;
   }
-  return {
-    size: cacheMap.size,
-    entries
-  };
+  return result;
 }
 
 // Create HTTP server to serve map contents
