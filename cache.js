@@ -2,7 +2,7 @@ import http from "http";
 import { createPublicClient, http as httpTransport } from "viem";
 import { mainnet } from "viem/chains";
 
-import { fallbackUrl, cachePort } from "./config.js";
+import { fallbackUrl, cachePort, checkInterval } from "./config.js";
 
 const cacheMap = new Map();
 
@@ -32,14 +32,28 @@ export const fallbackClient = createPublicClient({
   transport: httpTransport(fallbackUrl),
 });
 
-async function setCache() {
+async function setChainId() {
+  const chainId = await fallbackClient.getChainId();
+  cacheMap.set('chainId', chainId);
+}
+
+async function updateCache() {
   const blockNumber = await fallbackClient.getBlockNumber();
   const currentCachedBlock = cacheMap.get('blockNumber') || 0;
   
   if (blockNumber > currentCachedBlock) {
     cacheMap.set('blockNumber', blockNumber);
-    console.log("Scaffold RPC is on block\t" + blockNumber);
+    
+    const block = await fallbackClient.getBlock({ blockNumber });
+    // Convert block object to be JSON-serializable
+    const serializableBlock = JSON.parse(JSON.stringify(block, (_, value) =>
+      typeof value === 'bigint' ? value.toString() : value
+    ));
+    cacheMap.set('block', serializableBlock);
+
+    console.log("Updated cache. Block Number: " + blockNumber);
   }
 }
 
-setInterval(setCache, 1000);
+setChainId();
+setInterval(updateCache, checkInterval);
