@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "BuidlGuidl RPC Cache Service",
   "main": "cache.js",
+  "type": "module",
   "scripts": {
     "start": "node cache.js",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -12,5 +13,6 @@
   "license": "MIT",
   "repository": "https://github.com/sfaber34/bg-rpc-cache.git",
   "dependencies": {
+    "viem": "^2.22.20"
   }
-} 
+}
