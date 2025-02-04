@@ -34,22 +34,22 @@ export const fallbackClient = createPublicClient({
 
 async function setChainId() {
   const chainId = await fallbackClient.getChainId();
-  cacheMap.set('chainId', chainId);
+  cacheMap.set('eth_chainId', chainId);
 }
 
 async function updateCache() {
   const blockNumber = await fallbackClient.getBlockNumber();
-  const currentCachedBlock = cacheMap.get('blockNumber') || 0;
+  const currentCachedBlock = cacheMap.get('eth_blockNumber') || 0;
   
   if (blockNumber > currentCachedBlock) {
-    cacheMap.set('blockNumber', blockNumber);
+    cacheMap.set('eth_blockNumber', blockNumber);
     
     const block = await fallbackClient.getBlock({ blockNumber });
     // Convert block object to be JSON-serializable
     const serializableBlock = JSON.parse(JSON.stringify(block, (_, value) =>
       typeof value === 'bigint' ? value.toString() : value
     ));
-    cacheMap.set('block', serializableBlock);
+    cacheMap.set('eth_getBlockByNumber', serializableBlock);
 
     console.log("Updated cache. Block Number: " + blockNumber);
   }
