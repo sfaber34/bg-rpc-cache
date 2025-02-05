@@ -16,8 +16,41 @@ function getMapContents() {
 
 // Create HTTP server to serve map contents
 const server = http.createServer((req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify(getMapContents(), null, 2));
+  // Add CORS headers to allow connections
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  // Add error handling for the response
+  res.on('error', (err) => {
+    process.stderr.write(`[ERROR] Error sending response: ${err}\n`);
+  });
+
+  try {
+    res.setHeader('Content-Type', 'application/json');
+    const mapContents = getMapContents();
+    res.end(JSON.stringify(mapContents, null, 2));
+  } catch (error) {
+    process.stderr.write(`[ERROR] Error serving cache contents: ${error}\n`);
+    res.statusCode = 500;
+    res.end(JSON.stringify({ error: 'Internal server error' }));
+  }
+});
+
+// Add error handling for the server
+server.on('error', (error) => {
+  process.stderr.write(`[ERROR] Cache server error: ${error}\n`);
+  if (error.code === 'EADDRINUSE') {
+    process.stderr.write(`[ERROR] Port ${cachePort} is already in use\n`);
+    process.exit(1);
+  }
 });
 
 server.listen(cachePort, () => {
@@ -38,7 +71,7 @@ async function setChainId() {
     cacheMap.set('eth_chainId', chainId);
     console.log("Successfully set chain ID:", chainId);
   } catch (error) {
-    console.error("Error setting chain ID:", error.message);
+    process.stderr.write(`[ERROR] setChainId(): ${error.message}\n`);
   }
 }
 
@@ -59,13 +92,13 @@ async function updateCache() {
         cacheMap.set('eth_getBlockByNumber', serializableBlock);
         console.log("Updated cache. Block Number:", blockNumber);
       } catch (blockError) {
-        console.error("Error fetching block details:", blockError.message);
+        process.stderr.write(`[ERROR] Error fetching block details: ${blockError.message}\n`);
         // Still keep the block number even if block details fail
         console.log("Cached block number but failed to get block details");
       }
     }
   } catch (error) {
-    console.error("Error updating cache:", error.message);
+    process.stderr.write(`[ERROR] updateCache(): ${error.message}\n`);
   }
 }
 
