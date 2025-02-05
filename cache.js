@@ -6,12 +6,9 @@ import { fallbackUrl, cachePort, checkInterval } from "./config.js";
 
 const cacheMap = new Map();
 
-function getMapContents() {
-  const result = {};
-  for (const [key, value] of cacheMap.entries()) {
-    result[key] = typeof value === 'bigint' ? value.toString() : value;
-  }
-  return result;
+function getMapValue(key) {
+  const value = cacheMap.get(key);
+  return typeof value === 'bigint' ? value.toString() : value;
 }
 
 // Create HTTP server to serve map contents
@@ -35,8 +32,20 @@ const server = http.createServer((req, res) => {
 
   try {
     res.setHeader('Content-Type', 'application/json');
-    const mapContents = getMapContents();
-    res.end(JSON.stringify(mapContents, null, 2));
+    
+    // Parse the URL to get the key parameter
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const key = url.searchParams.get('key');
+
+    if (key) {
+      const value = getMapValue(key);
+      if (value !== undefined) {
+        res.end(JSON.stringify({ [key]: value }));
+      } else {
+        res.statusCode = 404;
+        res.end(JSON.stringify({ error: 'Key not found' }));
+      }
+    }
   } catch (error) {
     process.stderr.write(`[ERROR] Error serving cache contents: ${error}\n`);
     res.statusCode = 500;
