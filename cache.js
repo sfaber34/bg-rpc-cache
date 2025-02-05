@@ -102,5 +102,16 @@ async function updateCache() {
   }
 }
 
+// Add global error handlers
+process.on('uncaughtException', (error) => {
+  process.stderr.write(`[ERROR] Uncaught Exception: ${error.stack}\n`);
+  // Optionally, you might want to keep the process running instead of exiting
+  // process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  process.stderr.write(`[ERROR] Unhandled Rejection at: ${promise}\n[ERROR] Reason: ${reason}\n`);
+});
+
 setChainId();
 setInterval(updateCache, checkInterval);
