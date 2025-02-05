@@ -33,25 +33,39 @@ export const fallbackClient = createPublicClient({
 });
 
 async function setChainId() {
-  const chainId = await fallbackClient.getChainId();
-  cacheMap.set('eth_chainId', chainId);
+  try {
+    const chainId = await fallbackClient.getChainId();
+    cacheMap.set('eth_chainId', chainId);
+    console.log("Successfully set chain ID:", chainId);
+  } catch (error) {
+    console.error("Error setting chain ID:", error.message);
+  }
 }
 
 async function updateCache() {
-  const blockNumber = await fallbackClient.getBlockNumber();
-  const currentCachedBlock = cacheMap.get('eth_blockNumber') || 0;
-  
-  if (blockNumber > currentCachedBlock) {
-    cacheMap.set('eth_blockNumber', blockNumber);
+  try {
+    const blockNumber = await fallbackClient.getBlockNumber();
+    const currentCachedBlock = cacheMap.get('eth_blockNumber') || 0;
     
-    const block = await fallbackClient.getBlock({ blockNumber });
-    // Convert block object to be JSON-serializable
-    const serializableBlock = JSON.parse(JSON.stringify(block, (_, value) =>
-      typeof value === 'bigint' ? value.toString() : value
-    ));
-    cacheMap.set('eth_getBlockByNumber', serializableBlock);
-
-    console.log("Updated cache. Block Number: " + blockNumber);
+    if (blockNumber > currentCachedBlock) {
+      cacheMap.set('eth_blockNumber', blockNumber);
+      
+      try {
+        const block = await fallbackClient.getBlock({ blockNumber });
+        // Convert block object to be JSON-serializable
+        const serializableBlock = JSON.parse(JSON.stringify(block, (_, value) =>
+          typeof value === 'bigint' ? value.toString() : value
+        ));
+        cacheMap.set('eth_getBlockByNumber', serializableBlock);
+        console.log("Updated cache. Block Number:", blockNumber);
+      } catch (blockError) {
+        console.error("Error fetching block details:", blockError.message);
+        // Still keep the block number even if block details fail
+        console.log("Cached block number but failed to get block details");
+      }
+    }
+  } catch (error) {
+    console.error("Error updating cache:", error.message);
   }
 }
 
