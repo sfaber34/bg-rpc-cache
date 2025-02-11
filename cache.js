@@ -91,20 +91,7 @@ async function updateCache() {
     
     if (blockNumber > currentCachedBlock) {
       cacheMap.set('eth_blockNumber', blockNumber);
-      
-      try {
-        const block = await fallbackClient.getBlock({ blockNumber });
-        // Convert block object to be JSON-serializable
-        const serializableBlock = JSON.parse(JSON.stringify(block, (_, value) =>
-          typeof value === 'bigint' ? value.toString() : value
-        ));
-        cacheMap.set('eth_getBlockByNumber', serializableBlock);
-        console.log("Updated cache. Block Number:", blockNumber);
-      } catch (blockError) {
-        process.stderr.write(`[ERROR] Error fetching block details: ${blockError.message}\n`);
-        // Still keep the block number even if block details fail
-        console.log("Cached block number but failed to get block details");
-      }
+      console.log("Updated cache. Block Number:", blockNumber);
     }
   } catch (error) {
     process.stderr.write(`[ERROR] updateCache(): ${error.message}\n`);
