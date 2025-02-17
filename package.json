@@ -13,6 +13,7 @@
   "license": "MIT",
   "repository": "https://github.com/sfaber34/bg-rpc-cache.git",
   "dependencies": {
-    "viem": "^2.22.20"
+    "viem": "^2.22.20",
+    "ws": "^8.18.0"
   }
 }
