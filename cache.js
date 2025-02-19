@@ -60,13 +60,24 @@ async function sendCurrentValues(ws) {
       timestamp: null  // null indicates permanent cache
     }));
 
-    // Send current block number
-    const blockNumber = await fallbackClient.getBlockNumber();
+    // Send current block number and gas price
+    const [blockNumber, gasPrice] = await Promise.all([
+      fallbackClient.getBlockNumber(),
+      fallbackClient.getGasPrice()
+    ]);
+    
     lastKnownBlockNumber = blockNumber; // Update last known block
+    
     ws.send(JSON.stringify({ 
       method: 'eth_blockNumber', 
       value: serializeValue(blockNumber), 
       timestamp: Date.now() 
+    }));
+
+    ws.send(JSON.stringify({
+      method: 'eth_gasPrice',
+      value: serializeValue(gasPrice),
+      timestamp: Date.now()
     }));
   } catch (error) {
     console.error('Error sending current values:', error);
@@ -92,13 +103,17 @@ async function setChainId() {
 
 async function updateCache() {
   try {
-    const blockNumber = await fallbackClient.getBlockNumber();
+    const [blockNumber, gasPrice] = await Promise.all([
+      fallbackClient.getBlockNumber(),
+      fallbackClient.getGasPrice()
+    ]);
     
     // Only broadcast if block number has changed
     if (lastKnownBlockNumber === null || blockNumber > lastKnownBlockNumber) {
       lastKnownBlockNumber = blockNumber;
       broadcastUpdate('eth_blockNumber', blockNumber);
-      console.log("Updated cache. Block Number:", blockNumber.toString());
+      broadcastUpdate('eth_gasPrice', gasPrice);
+      console.log("Updated cache. Block Number:", blockNumber.toString(), "Gas Price:", gasPrice.toString());
     }
   } catch (error) {
     process.stderr.write(`[ERROR] updateCache(): ${error.message}\n`);
