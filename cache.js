@@ -1,11 +1,17 @@
-import http from "http";
+import http from "https";
 import { WebSocket, WebSocketServer } from 'ws';
 import { createPublicClient, http as httpTransport } from "viem";
 import { mainnet } from "viem/chains";
+import fs from "fs";
 
 import { fallbackUrl, cachePort, checkInterval } from "./config.js";
 
-const wss = new WebSocketServer({ port: cachePort });
+const wss = new WebSocketServer({ 
+  server: http.createServer({
+    key: fs.readFileSync('/home/ubuntu/shared/server.key'),
+    cert: fs.readFileSync('/home/ubuntu/shared/server.cert'),
+  }).listen(cachePort)
+});
 
 // Track last known block number to avoid duplicate updates
 let lastKnownBlockNumber = null;
