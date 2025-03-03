@@ -6,32 +6,37 @@ import fs from "fs";
 
 import { fallbackUrl, cachePort, checkInterval } from "./config.js";
 
+const server = http.createServer({
+  key: fs.readFileSync('/home/ubuntu/shared/server.key'),
+  cert: fs.readFileSync('/home/ubuntu/shared/server.cert'),
+  requestCert: true,
+  rejectUnauthorized: true
+});
+
+server.listen(cachePort, '127.0.0.1', () => {
+  console.log(`Cache server listening on port ${cachePort}`);
+});
+
 const wss = new WebSocketServer({ 
-  server: http.createServer({
-    key: fs.readFileSync('/home/ubuntu/shared/server.key'),
-    cert: fs.readFileSync('/home/ubuntu/shared/server.cert'),
-  }).listen(cachePort)
+  server,
+  path: '/ws'
 });
 
 // Track last known block number to avoid duplicate updates
 let lastKnownBlockNumber = null;
 
-console.log("----------------------------------------------------------------------------------------------------------------");
-console.log("----------------------------------------------------------------------------------------------------------------");
-console.log(`Cache WebSocket server running at ws://localhost:${cachePort}`);
-
 // Track connected clients
 const clients = new Set();
 
-wss.on('connection', (ws) => {
-  console.log('handleCachedRequest.js connected');
+wss.on('connection', (ws, req) => {
+  console.log(`New WebSocket connection from ${req.socket.remoteAddress}`);
   clients.add(ws);
 
   // Send current values to new client
   sendCurrentValues(ws);
 
   ws.on('close', () => {
-    console.log('handleCachedRequest.js disconnected');
+    console.log(`WebSocket client ${req.socket.remoteAddress} disconnected`);
     clients.delete(ws);
   });
 });
@@ -48,6 +53,7 @@ function broadcastUpdate(method, value, timestamp = Date.now()) {
     value: serializeValue(value), 
     timestamp 
   });
+
   for (const client of clients) {
     if (client.readyState === WebSocket.OPEN) {
       client.send(message);
@@ -72,7 +78,7 @@ async function sendCurrentValues(ws) {
       fallbackClient.getGasPrice()
     ]);
     
-    lastKnownBlockNumber = blockNumber; // Update last known block
+    lastKnownBlockNumber = blockNumber;
     
     ws.send(JSON.stringify({ 
       method: 'eth_blockNumber', 
@@ -99,7 +105,6 @@ export const fallbackClient = createPublicClient({
 async function setChainId() {
   try {
     const chainId = await fallbackClient.getChainId();
-    // Use null timestamp for eth_chainId since it never expires
     broadcastUpdate('eth_chainId', chainId, null);
     console.log("Successfully set chain ID:", chainId);
   } catch (error) {
@@ -114,12 +119,10 @@ async function updateCache() {
       fallbackClient.getGasPrice()
     ]);
     
-    // Only broadcast if block number has changed
     if (lastKnownBlockNumber === null || blockNumber > lastKnownBlockNumber) {
       lastKnownBlockNumber = blockNumber;
       broadcastUpdate('eth_blockNumber', blockNumber);
       broadcastUpdate('eth_gasPrice', gasPrice);
-      console.log("Updated cache. Block Number:", blockNumber.toString(), "Gas Price:", gasPrice.toString());
     }
   } catch (error) {
     process.stderr.write(`[ERROR] updateCache(): ${error.message}\n`);
