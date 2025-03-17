@@ -54,6 +54,9 @@ function broadcastUpdate(method, value, timestamp = Date.now()) {
     timestamp 
   });
 
+  // Log the update
+  console.log(`Updated local cache for ${method}: ${serializeValue(value)}`);
+
   for (const client of clients) {
     if (client.readyState === WebSocket.OPEN) {
       client.send(message);
